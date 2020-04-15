@@ -107,6 +107,13 @@ az network private-endpoint create -g $APP_PE_DEMO_RG -n kvpe --vnet-name $DEMO_
 #   Create the zone for: vault.azure.net
 #       Create an A Record for the Key Vault with the name and its private endpoint address
 
+# Creating Forward Lookup Zones in the DNS server you created above
+# You may be using root hints for DNS resolution on your custom DNS server.
+# Please add 168.63.129.16 as default forwarder on you custom DNS server.
+# https://docs.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverforwarder?view=win10-ps
+
+#   Create the zone for: vault.azure.net
+#       Create an A Record for the Key Vault with the name and its private endpoint address
 # Switch to custom DNS on VNET
 export DEMO_APP_VM_IP="10.0.2.4"
 az network vnet update -g $APP_PE_DEMO_RG -n $DEMO_VNET --dns-servers $DEMO_APP_VM_IP
