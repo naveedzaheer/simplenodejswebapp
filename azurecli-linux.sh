@@ -1,23 +1,23 @@
 az login
 az account set --subscription XXXXXXXXXXXXXXXXXXXXXX
 
-export APP_PE_DEMO_RG=nz007-pedemo-rg
+export APP_PE_DEMO_RG=nz007lin-pedemo-rg
 export LOCATION=eastus  
-export DEMO_VNET=nz007-pedemo-vnet
+export DEMO_VNET=nz007lin-pedemo-vnet
 export DEMO_VNET_CIDR=10.0.0.0/16
 export DEMO_VNET_APP_SUBNET=app_subnet
 export DEMO_VNET_APP_SUBNET_CIDR=10.0.1.0/24
 export DEMO_VNET_PL_SUBNET=pl_subnet
 export DEMO_VNET_PL_SUBNET_CIDR=10.0.2.0/24
 
-export DEMO_APP_PLAN=nz007-linux-app-plan
-export DEMO_APP_NAME=nz007-simplejava-app
+export DEMO_APP_PLAN=nz007lin-app-plan
+export DEMO_APP_NAME=nz007lin-simplejava-app
 
 export DEMO_APP_VM=pldemovm
 export DEMO_APP_VM_ADMIN=azureuser
 export DEMO_VM_IMAGE=MicrosoftWindowsServer:WindowsServer:2019-Datacenter:latest
 export DEMO_VM_SIZE=Standard_DS2_v2
-export DEMO_APP_KV=nz007-linux-demo-kv
+export DEMO_APP_KV=nz007lin-demo-kv-01
 
 export KV_SECRET_APP_MESSAGE="APP-MESSAGE"
 export KV_SECRET_APP_MESSAGE_VALUE="This is a test app message"
@@ -57,14 +57,14 @@ az vm create -n $DEMO_APP_VM -g $APP_PE_DEMO_RG --image MicrosoftWindowsServer:W
 ################ Complete the VM Setup before moving next #######################
 # Create App Service Plan
 az appservice plan create -g $APP_PE_DEMO_RG -l $LOCATION -n $DEMO_APP_PLAN \
-    --is-linux --number-of-workers 1 --sku P1V2
+   --is-linux --number-of-workers 1 --sku P1V2
 
-# Create Java Web App
+# Create Node JS Web App
 az webapp create -g $APP_PE_DEMO_RG -p $DEMO_APP_PLAN -n $DEMO_APP_NAME --runtime "NODE|10-lts"
 
 # "enabledHostNames": [
-#    "nz007-simplejava-app.azurewebsites.net",
-#    "nz007-simplejava-app.scm.azurewebsites.net"
+#    "nz007lin-simplejava-app.azurewebsites.net",
+#    "nz007lin-simplejava-app.scm.azurewebsites.net"
 #  ]
 
 # "outboundIpAddresses": "168.62.51.220,13.92.179.222,52.168.2.55,13.92.181.253,168.62.180.253",
@@ -75,17 +75,22 @@ az webapp create -g $APP_PE_DEMO_RG -p $DEMO_APP_PLAN -n $DEMO_APP_NAME --runtim
 az webapp identity assign -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
 
 # Capture identity from output
-export APP_MSI=""
+export APP_MSI="6c44a847-c59b-4b5b-91ae-307df62f8bf4"
 
 # Create Key Vault
 az keyvault create --location $LOCATION --name $DEMO_APP_KV --resource-group $APP_PE_DEMO_RG
 
+export KV_URI="/subscriptions/03228871-7f68-4594-b208-2d8207a65428/resourceGroups/nz007lin-pedemo-rg/providers/Microsoft.KeyVault/vaults/nz007lin-linux-demo-kv-01"
 # Set Key Vault Secrets
 # Please  take a note of the Secret Full Path and save it as KV_SECRET_DB_UID_FULLPATH
 az keyvault secret set --vault-name $DEMO_APP_KV --name "$KV_SECRET_APP_MESSAGE" --value "$KV_SECRET_APP_MESSAGE_VALUE"
 
 # Set Policy for Web App to access secrets
-az keyvault set-policy --name $DEMO_APP_KV --object-id $APP_MSI --secret-permissions get list
+az keyvault set-policy --name $DEMO_APP_KV  --resource-group $APP_PE_DEMO_RG --object-id $APP_MSI --secret-permissions get list
+
+# Set Private DNS Zone Settings
+az webapp config appsettings set -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME --settings "WEBSITE_DNS_SERVER"="168.63.129.16"
+az webapp config appsettings set -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME --settings "WEBSITE_VNET_ROUTE_ALL"="1"
 
 # Create Web App variable
 az webapp config appsettings set -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME --settings $KV_SECRET_APP_MESSAGE_VAR="$KV_SECRET_APP_MESSAGE"
@@ -103,13 +108,19 @@ az network vnet subnet update -g $APP_PE_DEMO_RG -n $DEMO_VNET_PL_SUBNET --vnet-
 az network private-endpoint create -g $APP_PE_DEMO_RG -n kvpe --vnet-name $DEMO_VNET --subnet $DEMO_VNET_PL_SUBNET \
     --private-connection-resource-id "$KV_URI" --connection-name kvpeconn -l $LOCATION --group-id "vault"
 
+export PRIVATE_KV_IP="10.0.2.4"
+export AZUREKEYVAULT_ZONE=privatelink.vaultcore.azure.net
+az network private-dns zone create -g $APP_PE_DEMO_RG -n $AZUREKEYVAULT_ZONE
+az network private-dns record-set a add-record -g $APP_PE_DEMO_RG -z $AZUREKEYVAULT_ZONE -n $DEMO_APP_KV -a $PRIVATE_KV_IP
+az network private-dns link vnet create -g $APP_PE_DEMO_RG --virtual-network $DEMO_VNET --zone-name privatelink.vaultcore.azure.net --name kvdnsLink --registration-enabled true
+
 # Creating Forward Lookup Zones in the DNS server you created above
 #   Create the zone for: vault.azure.net
 #       Create an A Record for the Key Vault with the name and its private endpoint address
 
 # Switch to custom DNS on VNET
-export DEMO_APP_VM_IP="10.0.2.4"
-az network vnet update -g $APP_PE_DEMO_RG -n $DEMO_VNET --dns-servers $DEMO_APP_VM_IP
+# export DEMO_APP_VM_IP="10.0.2.4"
+# az network vnet update -g $APP_PE_DEMO_RG -n $DEMO_VNET --dns-servers $DEMO_APP_VM_IP
 
 #
 # Change KV firewall - allow only PE access
@@ -123,10 +134,14 @@ az webapp vnet-integration add -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME --vnet $DEMO
 az webapp restart -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
 # ...and verify it still has access to KV
 
+#######################################################################################
+# Stop here to test Web App's VNET Integration 
+#######################################################################################
+
 # Get the webapp resource id
 az webapp show -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
 
-export WEB_APP_RESOURCE_ID="/subscriptions/fbd6916d-a76d-48f0-9b03-f1d9610d7970/resourceGroups/nz007-pedemo-rg/providers/Microsoft.Web/sites/nz007-simplejava-app"
+export WEB_APP_RESOURCE_ID="/subscriptions/fbd6916d-a76d-48f0-9b03-f1d9610d7970/resourceGroups/nz007lin-pedemo-rg/providers/Microsoft.Web/sites/nz007lin-simplejava-app"
 
 # Create Web App Private Link
 az network private-endpoint create -g $APP_PE_DEMO_RG -n webpe --vnet-name $DEMO_VNET --subnet $DEMO_VNET_PL_SUBNET \
