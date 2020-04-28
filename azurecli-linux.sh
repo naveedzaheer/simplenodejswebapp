@@ -4,11 +4,11 @@ az account set --subscription XXXXXXXXXXXXXXXXXXXXXX
 export APP_PE_DEMO_RG=nz007lin-pedemo-rg
 export LOCATION=eastus  
 export DEMO_VNET=nz007lin-pedemo-vnet
-export DEMO_VNET_CIDR=10.0.0.0/16
+export DEMO_VNET_CIDR=10.1.0.0/16
 export DEMO_VNET_APP_SUBNET=app_subnet
-export DEMO_VNET_APP_SUBNET_CIDR=10.0.1.0/24
+export DEMO_VNET_APP_SUBNET_CIDR=10.1.1.0/24
 export DEMO_VNET_PL_SUBNET=pl_subnet
-export DEMO_VNET_PL_SUBNET_CIDR=10.0.2.0/24
+export DEMO_VNET_PL_SUBNET_CIDR=10.1.2.0/24
 
 export DEMO_APP_PLAN=nz007lin-app-plan
 export DEMO_APP_NAME=nz007lin-simplejava-app
@@ -17,7 +17,7 @@ export DEMO_APP_VM=pldemovm
 export DEMO_APP_VM_ADMIN=azureuser
 export DEMO_VM_IMAGE=MicrosoftWindowsServer:WindowsServer:2019-Datacenter:latest
 export DEMO_VM_SIZE=Standard_DS2_v2
-export DEMO_APP_KV=nz007lin-demo-kv-01
+export DEMO_APP_KV=nz007lin-demo-kv-02
 
 export KV_SECRET_APP_MESSAGE="APP-MESSAGE"
 export KV_SECRET_APP_MESSAGE_VALUE="This is a test app message"
@@ -75,18 +75,21 @@ az webapp create -g $APP_PE_DEMO_RG -p $DEMO_APP_PLAN -n $DEMO_APP_NAME --runtim
 az webapp identity assign -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
 
 # Capture identity from output
-export APP_MSI="6c44a847-c59b-4b5b-91ae-307df62f8bf4"
+export APP_MSI="a45ccace-6d65-4471-996a-963fb0e76868"
 
 # Create Key Vault
 az keyvault create --location $LOCATION --name $DEMO_APP_KV --resource-group $APP_PE_DEMO_RG
 
-export KV_URI="/subscriptions/03228871-7f68-4594-b208-2d8207a65428/resourceGroups/nz007lin-pedemo-rg/providers/Microsoft.KeyVault/vaults/nz007lin-linux-demo-kv-01"
+export KV_URI="/subscriptions/03228871-7f68-4594-b208-2d8207a65428/resourceGroups/nz007lin-pedemo-rg/providers/Microsoft.KeyVault/vaults/nz007lin-demo-kv-02"
 # Set Key Vault Secrets
 # Please  take a note of the Secret Full Path and save it as KV_SECRET_DB_UID_FULLPATH
 az keyvault secret set --vault-name $DEMO_APP_KV --name "$KV_SECRET_APP_MESSAGE" --value "$KV_SECRET_APP_MESSAGE_VALUE"
 
 # Set Policy for Web App to access secrets
 az keyvault set-policy --name $DEMO_APP_KV  --resource-group $APP_PE_DEMO_RG --object-id $APP_MSI --secret-permissions get list
+
+# Attach Web App to the VNET (VNET integration)
+az webapp vnet-integration add -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME --vnet $DEMO_VNET --subnet $DEMO_VNET_APP_SUBNET
 
 # Set Private DNS Zone Settings
 az webapp config appsettings set -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME --settings "WEBSITE_DNS_SERVER"="168.63.129.16"
@@ -108,7 +111,7 @@ az network vnet subnet update -g $APP_PE_DEMO_RG -n $DEMO_VNET_PL_SUBNET --vnet-
 az network private-endpoint create -g $APP_PE_DEMO_RG -n kvpe --vnet-name $DEMO_VNET --subnet $DEMO_VNET_PL_SUBNET \
     --private-connection-resource-id "$KV_URI" --connection-name kvpeconn -l $LOCATION --group-id "vault"
 
-export PRIVATE_KV_IP="10.0.2.4"
+export PRIVATE_KV_IP="10.1.2.4"
 export AZUREKEYVAULT_ZONE=privatelink.vaultcore.azure.net
 az network private-dns zone create -g $APP_PE_DEMO_RG -n $AZUREKEYVAULT_ZONE
 az network private-dns record-set a add-record -g $APP_PE_DEMO_RG -z $AZUREKEYVAULT_ZONE -n $DEMO_APP_KV -a $PRIVATE_KV_IP
@@ -126,16 +129,13 @@ az network private-dns link vnet create -g $APP_PE_DEMO_RG --virtual-network $DE
 #   Create the zone for: vault.azure.net
 #       Create an A Record for the Key Vault with the name and its private endpoint address
 # Switch to custom DNS on VNET
-# export DEMO_APP_VM_IP="10.0.2.4"
+# export DEMO_APP_VM_IP="10.1.2.4"
 # az network vnet update -g $APP_PE_DEMO_RG -n $DEMO_VNET --dns-servers $DEMO_APP_VM_IP
 
 #
 # Change KV firewall - allow only PE access
 # Verify it's locked down (click on Secrets from browser)
 #
-
-# Attach Web App to the VNET (VNET integration)
-az webapp vnet-integration add -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME --vnet $DEMO_VNET --subnet $DEMO_VNET_APP_SUBNET
 
 # Now restart the webapp
 az webapp restart -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME

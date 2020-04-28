@@ -17,7 +17,7 @@ export DEMO_APP_VM=pldemovm
 export DEMO_APP_VM_ADMIN=azureuser
 export DEMO_VM_IMAGE=MicrosoftWindowsServer:WindowsServer:2019-Datacenter:latest
 export DEMO_VM_SIZE=Standard_DS2_v2
-export DEMO_APP_KV=nz007win-demo-kv-01
+export DEMO_APP_KV=nz007win-demo-kv-02
 
 export KV_SECRET_APP_MESSAGE="APP-MESSAGE"
 export KV_SECRET_APP_MESSAGE_VALUE="This is a test app message"
@@ -60,7 +60,7 @@ az appservice plan create -g $APP_PE_DEMO_RG -l $LOCATION -n $DEMO_APP_PLAN \
    --number-of-workers 1 --sku P1V2
 
 # Create Node JS Web App
-az webapp create -g $APP_PE_DEMO_RG -p $DEMO_APP_PLAN -n $DEMO_APP_NAME --runtime "node|10.15"
+az webapp create -g $APP_PE_DEMO_RG -p $DEMO_APP_PLAN -n $DEMO_APP_NAME 
 
 # "enabledHostNames": [
 #    "nz007win-simplejava-app.azurewebsites.net",
@@ -75,18 +75,21 @@ az webapp create -g $APP_PE_DEMO_RG -p $DEMO_APP_PLAN -n $DEMO_APP_NAME --runtim
 az webapp identity assign -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
 
 # Capture identity from output
-export APP_MSI="6c44a847-c59b-4b5b-91ae-307df62f8bf4"
+export APP_MSI="21a6a6d2-c6b9-4e52-a444-9f6b6be69ef4"
 
 # Create Key Vault
 az keyvault create --location $LOCATION --name $DEMO_APP_KV --resource-group $APP_PE_DEMO_RG
 
-export KV_URI="/subscriptions/03228871-7f68-4594-b208-2d8207a65428/resourceGroups/nz007win-pedemo-rg/providers/Microsoft.KeyVault/vaults/nz007win-linux-demo-kv-01"
+export KV_URI="/subscriptions/03228871-7f68-4594-b208-2d8207a65428/resourceGroups/nz007win-pedemo-rg/providers/Microsoft.KeyVault/vaults/nz007win-demo-kv-02"
 # Set Key Vault Secrets
 # Please  take a note of the Secret Full Path and save it as KV_SECRET_DB_UID_FULLPATH
 az keyvault secret set --vault-name $DEMO_APP_KV --name "$KV_SECRET_APP_MESSAGE" --value "$KV_SECRET_APP_MESSAGE_VALUE"
 
 # Set Policy for Web App to access secrets
 az keyvault set-policy --name $DEMO_APP_KV  --resource-group $APP_PE_DEMO_RG --object-id $APP_MSI --secret-permissions get list
+
+# Attach Web App to the VNET (VNET integration)
+az webapp vnet-integration add -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME --vnet $DEMO_VNET --subnet $DEMO_VNET_APP_SUBNET
 
 # Set Private DNS Zone Settings
 az webapp config appsettings set -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME --settings "WEBSITE_DNS_SERVER"="168.63.129.16"
@@ -127,8 +130,6 @@ az network private-dns link vnet create -g $APP_PE_DEMO_RG --virtual-network $DE
 # Verify it's locked down (click on Secrets from browser)
 #
 
-# Attach Web App to the VNET (VNET integration)
-az webapp vnet-integration add -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME --vnet $DEMO_VNET --subnet $DEMO_VNET_APP_SUBNET
 
 # Now restart the webapp
 az webapp restart -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
