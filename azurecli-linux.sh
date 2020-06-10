@@ -2,7 +2,7 @@ az login
 az account set --subscription XXXXXXXXXXXXXXXXXXXXXX
 
 export APP_PE_DEMO_RG=nz007lin-pedemo-rg
-export LOCATION=eastus  
+export LOCATION=eastus2  
 export DEMO_VNET=nz007lin-pedemo-vnet
 export DEMO_VNET_CIDR=10.1.0.0/16
 export DEMO_VNET_APP_SUBNET=app_subnet
@@ -13,11 +13,11 @@ export DEMO_VNET_PL_SUBNET_CIDR=10.1.2.0/24
 export DEMO_APP_PLAN=nz007lin-app-plan
 export DEMO_APP_NAME=nz007lin-simplejava-app
 
-export DEMO_APP_VM=pldemovm
+export DEMO_APP_VM=pldemovmlin
 export DEMO_APP_VM_ADMIN=azureuser
 export DEMO_VM_IMAGE=MicrosoftWindowsServer:WindowsServer:2019-Datacenter:latest
 export DEMO_VM_SIZE=Standard_DS2_v2
-export DEMO_APP_KV=nz007lin-demo-kv-02
+export DEMO_APP_KV=nz007lin-demo-kv-03
 
 export KV_SECRET_APP_MESSAGE="APP-MESSAGE"
 export KV_SECRET_APP_MESSAGE_VALUE="This is a test app message"
@@ -75,12 +75,12 @@ az webapp create -g $APP_PE_DEMO_RG -p $DEMO_APP_PLAN -n $DEMO_APP_NAME --runtim
 az webapp identity assign -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
 
 # Capture identity from output
-export APP_MSI="a45ccace-6d65-4471-996a-963fb0e76868"
+export APP_MSI="73ed6793-88ec-4414-86d5-309340102ed3"
 
 # Create Key Vault
 az keyvault create --location $LOCATION --name $DEMO_APP_KV --resource-group $APP_PE_DEMO_RG
 
-export KV_URI="/subscriptions/03228871-7f68-4594-b208-2d8207a65428/resourceGroups/nz007lin-pedemo-rg/providers/Microsoft.KeyVault/vaults/nz007lin-demo-kv-02"
+export KV_URI="/subscriptions/03228871-7f68-4594-b208-2d8207a65428/resourceGroups/nz007lin-pedemo-rg/providers/Microsoft.KeyVault/vaults/nz007lin-demo-kv-03"
 # Set Key Vault Secrets
 # Please  take a note of the Secret Full Path and save it as KV_SECRET_DB_UID_FULLPATH
 az keyvault secret set --vault-name $DEMO_APP_KV --name "$KV_SECRET_APP_MESSAGE" --value "$KV_SECRET_APP_MESSAGE_VALUE"
@@ -148,14 +148,14 @@ az webapp restart -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
 # Get the webapp resource id
 az webapp show -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
 
-export WEB_APP_RESOURCE_ID="/subscriptions/fbd6916d-a76d-48f0-9b03-f1d9610d7970/resourceGroups/nz007lin-pedemo-rg/providers/Microsoft.Web/sites/nz007lin-simplejava-app"
+export WEB_APP_RESOURCE_ID="/subscriptions/03228871-7f68-4594-b208-2d8207a65428/resourceGroups/nz007lin-pedemo-rg/providers/Microsoft.Web/sites/nz007lin-simplejava-app"
 
 # Create Web App Private Link
 az network private-endpoint create -g $APP_PE_DEMO_RG -n webpe --vnet-name $DEMO_VNET --subnet $DEMO_VNET_PL_SUBNET \
     --private-connection-resource-id $WEB_APP_RESOURCE_ID --connection-name webpeconn -l $LOCATION --group-id "sites"
 
 # The remaining private DNS for app's frontend can be handled via private DNS zones
-export PRIVATE_APP_IP=""
+export PRIVATE_APP_IP="10.1.2.5"
 
 export AZUREWEBSITES_ZONE=azurewebsites.net
 az network private-dns zone create -g $APP_PE_DEMO_RG -n $AZUREWEBSITES_ZONE

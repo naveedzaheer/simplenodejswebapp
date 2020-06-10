@@ -2,7 +2,7 @@ az login
 az account set --subscription XXXXXXXXXXXXXXXXXXXXXX
 
 export APP_PE_DEMO_RG=nz007win-pedemo-rg
-export LOCATION=eastus  
+export LOCATION=eastus2  
 export DEMO_VNET=nz007win-pedemo-vnet
 export DEMO_VNET_CIDR=10.0.0.0/16
 export DEMO_VNET_APP_SUBNET=app_subnet
@@ -75,7 +75,7 @@ az webapp create -g $APP_PE_DEMO_RG -p $DEMO_APP_PLAN -n $DEMO_APP_NAME
 az webapp identity assign -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
 
 # Capture identity from output
-export APP_MSI="21a6a6d2-c6b9-4e52-a444-9f6b6be69ef4"
+export APP_MSI="fd8753ea-9124-42ac-93c5-3a84e9d0e16f"
 
 # Create Key Vault
 az keyvault create --location $LOCATION --name $DEMO_APP_KV --resource-group $APP_PE_DEMO_RG
@@ -142,14 +142,14 @@ az webapp restart -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
 # Get the webapp resource id
 az webapp show -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME
 
-export WEB_APP_RESOURCE_ID="/subscriptions/fbd6916d-a76d-48f0-9b03-f1d9610d7970/resourceGroups/nz007win-pedemo-rg/providers/Microsoft.Web/sites/nz007win-simplejava-app"
+export WEB_APP_RESOURCE_ID="/subscriptions/03228871-7f68-4594-b208-2d8207a65428/resourceGroups/nz007win-pedemo-rg/providers/Microsoft.Web/sites/nz007win-simplejava-app"
 
 # Create Web App Private Link
 az network private-endpoint create -g $APP_PE_DEMO_RG -n webpe --vnet-name $DEMO_VNET --subnet $DEMO_VNET_PL_SUBNET \
     --private-connection-resource-id $WEB_APP_RESOURCE_ID --connection-name webpeconn -l $LOCATION --group-id "sites"
 
 # The remaining private DNS for app's frontend can be handled via private DNS zones
-export PRIVATE_APP_IP=""
+export PRIVATE_APP_IP="10.0.2.6"
 
 export AZUREWEBSITES_ZONE=azurewebsites.net
 az network private-dns zone create -g $APP_PE_DEMO_RG -n $AZUREWEBSITES_ZONE
