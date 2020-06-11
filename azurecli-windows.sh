@@ -149,19 +149,16 @@ az network private-endpoint create -g $APP_PE_DEMO_RG -n webpe --vnet-name $DEMO
     --private-connection-resource-id $WEB_APP_RESOURCE_ID --connection-name webpeconn -l $LOCATION --group-id "sites"
 
 # The remaining private DNS for app's frontend can be handled via private DNS zones
-export PRIVATE_APP_IP="10.0.2.6"
+# The remaining private DNS for app's frontend can be handled via private DNS zones
+export PRIVATE_APP_IP="10.1.2.5"
 
-export AZUREWEBSITES_ZONE=azurewebsites.net
+export AZUREWEBSITES_ZONE=privatelink.azurewebsites.net
 az network private-dns zone create -g $APP_PE_DEMO_RG -n $AZUREWEBSITES_ZONE
 az network private-dns record-set a add-record -g $APP_PE_DEMO_RG -z $AZUREWEBSITES_ZONE -n $DEMO_APP_NAME -a $PRIVATE_APP_IP
-
-export AZUREWEBSITES_SCM_ZONE=scm.azurewebsites.net
-az network private-dns zone create -g $APP_PE_DEMO_RG -n $AZUREWEBSITES_SCM_ZONE
-az network private-dns record-set a add-record -g $APP_PE_DEMO_RG -z $AZUREWEBSITES_SCM_ZONE -n $DEMO_APP_NAME -a $PRIVATE_APP_IP
+az network private-dns record-set a add-record -g $APP_PE_DEMO_RG -z $AZUREWEBSITES_ZONE -n $DEMO_APP_NAME".scm" -a $PRIVATE_APP_IP
 
 # Link zones to VNET
 az network private-dns link vnet create -g $APP_PE_DEMO_RG -n webpe-link -z $AZUREWEBSITES_ZONE -v $DEMO_VNET -e False
-az network private-dns link vnet create -g $APP_PE_DEMO_RG -n webpe-link -z $AZUREWEBSITES_SCM_ZONE -v $DEMO_VNET -e False
 
 # Create remaining DNS entries (app's frontend)
 #   Create the zone for: azurewebsites.net
