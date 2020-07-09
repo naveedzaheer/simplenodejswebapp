@@ -1,13 +1,12 @@
 # Please provide your subscription id here
 export APP_SUBSCRIPTION_ID=03228871-7f68-4594-b208-2d8207a65428
 # Please provide your unique prefix to make sure that your resources are unique
-export APP_PREFIX=nzscus01
+export APP_PREFIX=nzwestus201
 # Please provide your region
-export LOCATION=SouthCentralUS
+export LOCATION=WestUS2
 # Please provide your OS
 export IS_LINUX=true
-export IS_CONTAINER=true
-export OS_TYPE=Linux #Windows
+export IS_CONTAINER=false
 
 export VNET_PREFIX="10.20."
 
@@ -22,7 +21,7 @@ export DEMO_VNET_PL_SUBNET_CIDR=$VNET_PREFIX"2.0/24"
 export DEMO_APP_PLAN=$APP_PREFIX"-webapp-plan"
 export DEMO_APP_NAME=$APP_PREFIX"-web-app"
 
-export DEMO_APP_VM=pldemovm
+export DEMO_APP_VM=$APP_PREFIX"-vm"
 export DEMO_APP_VM_ADMIN=azureuser
 export DEMO_VM_IMAGE=MicrosoftWindowsServer:WindowsServer:2019-Datacenter:latest
 export DEMO_VM_SIZE=Standard_DS2_v2
@@ -150,6 +149,9 @@ export AZUREKEYVAULT_ZONE=privatelink.vaultcore.azure.net
 az network private-dns zone create -g $APP_PE_DEMO_RG -n $AZUREKEYVAULT_ZONE
 az network private-dns record-set a add-record -g $APP_PE_DEMO_RG -z $AZUREKEYVAULT_ZONE -n $DEMO_APP_KV -a $PRIVATE_KV_IP
 az network private-dns link vnet create -g $APP_PE_DEMO_RG --virtual-network $DEMO_VNET --zone-name $AZUREKEYVAULT_ZONE --name kvdnsLink --registration-enabled false
+
+# Only allow KV access from teh Privet Endpoints
+az keyvault update --resource-group $APP_PE_DEMO_RG --name $DEMO_APP_KV --default-action Deny --bypass None
 
 #
 # Change KV firewall - allow only PE access
