@@ -1,9 +1,9 @@
 # Please provide your subscription id here
 export APP_SUBSCRIPTION_ID=03228871-7f68-4594-b208-2d8207a65428
 # Please provide your unique prefix to make sure that your resources are unique
-export APP_PREFIX=nzwestus201
+export APP_PREFIX=nzeastus201
 # Please provide your region
-export LOCATION=WestUS2
+export LOCATION=EastUS2
 # Please provide your OS
 export IS_LINUX=true
 export IS_CONTAINER=false
@@ -45,7 +45,6 @@ az network vnet subnet create -g $APP_PE_DEMO_RG --vnet-name $DEMO_VNET -n $DEMO
     --address-prefixes $DEMO_VNET_PL_SUBNET_CIDR
 
 # Create VM to host
-# - DNS
 # - NodeJS
 # - VS Code
 # - Azure CLI
@@ -56,8 +55,7 @@ az vm create -n $DEMO_APP_VM -g $APP_PE_DEMO_RG --image MicrosoftWindowsServer:W
 # 52.188.33.128
 
 # Install VS Code - https://code.visualstudio.com/download
-# Setup DNS server
-# Windows DNS Server - https://www.wintelpro.com/install-and-configure-dns-on-windows-server-2019/
+# Install NodeJs - https://nodejs.org/en/download/
 
 if [ $IS_CONTAINER = true ]; then
     # Create ACR and note down the user name and password for the repo as it will be used on line 70/71
