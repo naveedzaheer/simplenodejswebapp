@@ -45,17 +45,8 @@ az network vnet subnet create -g $APP_PE_DEMO_RG --vnet-name $DEMO_VNET -n $DEMO
     --address-prefixes $DEMO_VNET_PL_SUBNET_CIDR
 
 # Create VM to host
-# - NodeJS
-# - VS Code
-# - Azure CLI
 az vm create -n $DEMO_APP_VM -g $APP_PE_DEMO_RG --image MicrosoftWindowsServer:WindowsServer:2019-Datacenter:latest \
    --vnet-name $DEMO_VNET --subnet $DEMO_VNET_PL_SUBNET --public-ip-sku Standard --size $DEMO_VM_SIZE --admin-username $DEMO_APP_VM_ADMIN
-
-# Capture public IP of the jump/DNS box
-# 52.188.33.128
-
-# Install VS Code - https://code.visualstudio.com/download
-# Install NodeJs - https://nodejs.org/en/download/
 
 if [ $IS_CONTAINER = true ]; then
     # Create ACR and note down the user name and password for the repo as it will be used on line 70/71
@@ -130,18 +121,6 @@ az network vnet subnet update -g $APP_PE_DEMO_RG -n $DEMO_VNET_PL_SUBNET --vnet-
 PRIVATE_KV_IP=$(az network private-endpoint create -g $APP_PE_DEMO_RG -n kvpe --vnet-name $DEMO_VNET --subnet $DEMO_VNET_PL_SUBNET \
     --private-connection-resource-id "$KV_URI" --connection-name kvpeconn -l $LOCATION --group-id "vault" --query customDnsConfigs[0].ipAddresses[0] -o tsv)
 
-# Creating Forward Lookup Zones in the DNS server you created above
-# You may be using root hints for DNS resolution on your custom DNS server.
-# Please add 168.63.129.16 as default forwarder on you custom DNS server.
-# https://docs.microsoft.com/en-us/powershell/module/dnsserver/set-dnsserverforwarder?view=win10-ps
-
-#   Create the zone for: vault.azure.net
-#       Create an A Record for the Key Vault with the name and its private endpoint address
-
-# Switch to custom DNS on VNET
-# export DEMO_APP_VM_IP="10.0.2.4"
-# az network vnet update -g $APP_PE_DEMO_RG -n $DEMO_VNET --dns-servers $DEMO_APP_VM_IP
-
 # Private DNS Zones
 export AZUREKEYVAULT_ZONE=privatelink.vaultcore.azure.net
 az network private-dns zone create -g $APP_PE_DEMO_RG -n $AZUREKEYVAULT_ZONE
@@ -162,9 +141,11 @@ az webapp vnet-integration add -g $APP_PE_DEMO_RG -n $DEMO_APP_NAME --vnet $DEMO
 
 ######################################################################################################
 # Use VSCode to deploy the web app
+# Website code is in:
+# # index.js
 ######################################################################################################
 ##################################################################################################
-# !!!!!!!!!!!!!!!!!!!!!!!!Stop Here Before Creating the Private Endpoint for Wev app!!!!!!!!!!!!!
+# !!!!!!!!!!!!!!!!!!!!!!!!Stop Here Before Creating the Private Endpoint for Web app!!!!!!!!!!!!!
 # You should now use VSCode to push the nodejs Web App to the App Service
 # Test the App to make sure that it is running
 ##################################################################################################
